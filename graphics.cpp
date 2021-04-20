@@ -1,5 +1,6 @@
 #include "circle.h"
 #include "graphics.h"
+#include <ctime>
 #include <iostream>
 #include <vector>
 using namespace std;
@@ -209,7 +210,7 @@ int main(int argc, char** argv) {
     glutInitDisplayMode(GLUT_RGBA);
 
     glutInitWindowSize((int)width, (int)height);
-    glutInitWindowPosition(100, 200); // Position the window's initial top-left corner
+    glutInitWindowPosition(0, 0); // Position the window's initial top-left corner
     /* create the window and store the handle to it */
     wd = glutCreateWindow("Graphics Jeopardy!" /* title */ );
 
