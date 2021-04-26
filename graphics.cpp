@@ -1,47 +1,90 @@
 #include "circle.h"
+#include "rect.h"
 #include "graphics.h"
 #include <ctime>
 #include <iostream>
 #include <vector>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-
-
-
+#include <string>
 using namespace std;
 
+
+
 GLdouble width, height;
-int wd;
-Circle ball;
-Circle bubble;
-Circle sun;
-vector<Circle> eye;
-vector<Circle> snow;
+int wd, ballSize;
+vector<Circle> balls;
+Rect user;
+point2D userCenter;
+dimensions userDimensions;
+int userHeight;
+int userWidth;
+bool ballMovesRight;
+int points;
+int level;
+int addedPointsPerLevel;
+int ballSpeed;
+color ballColor;
+screenLetter screen;
+const color skyBlue(77/255.0, 213/255.0, 240/255.0);
+const color grassGreen(26/255.0, 176/255.0, 56/255.0);
+const color white(1, 1, 1);
+const color brickRed(201/255.0, 20/255.0, 20/255.0);
+const color darkBlue(1/255.0, 110/255.0, 214/255.0);
+const color purple(119/255.0, 11/255.0, 224/255.0);
+const color magenta(1, 0, 1);
+const color orange(1, 163/255.0, 22/255.0);
+const color cyan (0, 1, 1);
+vector<color> colors;
+
+
+// checks if a circle is on the screen
+bool onScreen(Circle circle) {
+    if (circle.getRightX() > 0 && circle.getLeftX() < width) {
+        return true;
+    }
+    return false;
+}
+
+// checks if a circle has collided with a rectangle
+bool circleHitRect(Circle &c, Rect &r) {
+    if (c.getTopY() <= r.getBottomY() && c.getBottomY() >= r.getTopY() && c.getRightX() >= r.getLeftX()) {
+        return true;
+    }
+    return false;
+}
+
 
 void init() {
     srand(time(0));
     width = 800;
     height = 800;
+    ballSize = 20;
 
-    ball.setCenter(400, 400);
-    ball.setColor(0.7, 0, 0, 1);
-    ball.setRadius(50);
+    // set initial user attributes
+    userHeight = 400;
+    userWidth = 30;
+    userCenter.x = int(width - (userWidth/2));
+    userCenter.y = int(height/2);
+    userDimensions.width = userWidth;
+    userDimensions.height = userHeight;
+    user = Rect(cyan, userCenter, userDimensions);
 
-    bubble.setCenter(500, 300);
-    bubble.setColor(0.7, 0.8, 0.8, 1);
-    bubble.setRadius(30);
-
-    sun.setCenter(width, 0);
-    sun.setColor(1, 1, 0, 1);
-    sun.setRadius(100);
-
-    eye.push_back(Circle(1, 1, 1, 1, -20, -20, 20));
-    eye.push_back(Circle(0, 0, 1, 1, -20, -20, 10));
-    eye.push_back(Circle(0, 0, 0, 1, -20, -20, 3));
-
-    for (int i = 0; i < 150; ++i) {
-        snow.push_back(Circle(1, 1, 1, 1, rand() % int(width), -(rand() % int(height)), rand() % 5 + 1));
+    // make some balls at different heights
+    for (int i = 0; i < 100; ++i) {
+        balls.push_back(Circle(1, 0, 0, 1, -ballSize, (rand() % int(height - ballSize) + ballSize), ballSize));
     }
+
+    // populate colors vector
+    colors = { skyBlue, grassGreen, white, brickRed, darkBlue, purple, magenta, orange, cyan };
+
+    // for game play
+    ballMovesRight = true;
+    points = 0;
+    level = 1;
+    addedPointsPerLevel = 5;
+    ballSpeed = ballSize * (1 + (level * 0.2));
+    screen = w;
 }
 
 /* Initialize OpenGL Graphics */
@@ -67,36 +110,41 @@ void display() {
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // DO NOT CHANGE THIS LINE
 
-    /*
-     * Draw here
-     */
-    sun.draw();
-
-    // D1: What is being drawn? Where? What color?
-     glColor3f(0, 0.5, 0);
-     glBegin(GL_TRIANGLES);
-     glVertex2i(0, 0);
-     glVertex2i(0, 100);
-     glVertex2i(100, 0);
-     glEnd();
-
-    for (Circle &flake : snow) {
-        flake.draw();
+    if (screen == w) {
+        glColor3f(1, 1, 1);
+        glRasterPos2i(200, 200);
+        string message = "Welcome, hit 'p' to play rectangle goalie!!";
+        for (const char &letter: message) {
+            glutBitmapCharacter(GLUT_BITMAP_8_BY_13, letter);
+        }
     }
+    else if (screen == p) {
+        user.draw();
 
-    // D2: What is being drawn? Where? What color?
-    ball.draw();
-
-    bubble.draw();
-
-    for (Circle &e : eye) {
-        e.draw();
+        for (Circle &ball : balls) {
+            ball.draw();
+        }
     }
-
+    else if (screen == b) {
+        glColor3f(1, 1, 1);
+        glRasterPos2i(200, 200);
+        string message = "You passed level" + to_string(level) + "! Hit spacebar to go to start next level.";
+        for (const char &letter: message) {
+            glutBitmapCharacter(GLUT_BITMAP_8_BY_13, letter);
+        }
+    }
+    else {
+        glColor3f(1, 1, 1);
+        glRasterPos2i(200, 200);
+        string message = "Game over! You made it to level " + to_string(level) + "! Hit 'p' to play again!";
+        for (const char &letter: message) {
+            glutBitmapCharacter(GLUT_BITMAP_8_BY_13, letter);
+        }
+    }
     glFlush();  // Render now
 }
 
-// http://www.theasciicode.com.ar/ascii-control-characters/escape-ascii-code-27.html
+
 void kbd(unsigned char key, int x, int y) {
     switch(key) {
         case 27: {
@@ -104,45 +152,76 @@ void kbd(unsigned char key, int x, int y) {
             glutDestroyWindow(wd);
             exit(0);
         }
-        case 'b': {
-            // K1: What does this line of code do? When?
-            bubble.setColor(0, 0, 0, 1);
-            break;
-        }
-        case 'o': {
-            // K2: What happens when the bubble gets big
-            // enough to overlap with other shapes?
-            bubble.setRadius(bubble.getRadius() + 5);
-            break;
+
+        // p: user can hit it whenever to start over
+        case 112: {
+            points = 0;
+            level = 1;
+            ballSpeed = ballSize * (1 + (level * 0.2));
+
+            // reposition balls
+            for (Circle &ball : balls) {
+                if (onScreen(ball) || ball.getRightX() > width) {
+                    ball.setCenter(-ballSize, rand() % int(height));
+                }
+            }
+            // reposition user to center and reset size
+            user.setCenter(userCenter);
+            user.setHeight(userHeight);
+            screen = p;
         }
     }
+
+    // only allow spacebar to be hit spacebar if you are between turns
+    if (screen == b && key == 32) {
+        points = 0;
+        level++;
+
+        // update balls
+        ballSpeed = ballSize * (1 + (level * 0.2));
+        ballColor = colors[rand() % colors.size() - 1];
+        for (Circle &ball : balls) {
+            ball.setColor(ballColor);
+            if (onScreen(ball) || ball.getRightX() > width) {
+                ball.setCenter(-ballSize, rand() % int(height));
+            }
+        }
+
+        // update user
+        if (user.getHeight() > ballSize * 2) {
+            user.changeHeight(-(userHeight/10));
+        }
+        user.setCenter(userCenter);
+        user.setColor(colors[rand() % colors.size() - 1]);
+        screen = p;
+    }
+
     glutPostRedisplay();
 }
 
 void kbdUp(unsigned char key, int x, int y) {
-    // K3: What will happen here? When?
-     switch(key) {
-         case 'b': {
-             bubble.setColor(0.7, 0.8, 0.8, 1);
-             break;
-         }
-     }
+
     glutPostRedisplay();
 }
 
 void kbdS(int key, int x, int y) {
     switch(key) {
         case GLUT_KEY_DOWN:
-
+            if (user.getBottomY() + 30 <= height) {
+                user.move(0, 30);
+            }
+            else {
+                user.move(0, height - user.getBottomY());
+            }
             break;
-        case GLUT_KEY_LEFT:
 
-            break;
-        case GLUT_KEY_RIGHT:
-
-            break;
         case GLUT_KEY_UP:
-
+            if (user.getTopY() - 30 >= 0) {
+                user.move(0, -30);
+            }
+            else {
+                user.move(0, -(user.getTopY()));
+            }
             break;
     }
 
@@ -151,16 +230,6 @@ void kbdS(int key, int x, int y) {
 
 void cursor(int x, int y) {
 
-    // M2: What does this line do? What will it look like?
-     eye[1].setColor(0, x/double(width), y/double(height), 1);
-
-    // M3: What do these lines do? What will it look like?
-     if (x >= 0 && x <= width && y >= 0 && y <= height) {
-        eye[1].setCenter(eye[0].getCenterX() + (x / (double) width * 20 - 10),
-                         eye[0].getCenterY() + (y / (double) height * 20 - 10));
-         eye[2].setCenter(eye[1].getCenterX() + (x / (double) width * 14 - 7),
-                          eye[1].getCenterY() + (y / (double) height * 14 - 7));
-     }
     glutPostRedisplay();
 }
 
@@ -175,30 +244,48 @@ void mouse(int button, int state, int x, int y) {
          glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, letter);
      }
 
-     //M1: What does this code do?
-     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-         for (Circle &e : eye) {
-            e.setCenter(x, y);
-        }
-     }
+
      glutPostRedisplay();
 }
 
 void timer(int dummy) {
+    // only do this if screen is in playing mode
+    if (screen == p) {
+        // check if there is a ball already on screen, if so then move that one
+        bool ballOnScreen = false;
+        for (Circle &ball : balls) {
+            if (onScreen(ball)) {
+                // move it left if it has already collided with user
+                if (ballMovesRight) {
+                    ball.moveX(ballSpeed);
+                } else {
+                    ball.moveX(-ballSpeed);
+                }
 
-    // T1: In what direction will the sun move?
-     sun.move(-1, 1);
+                // if it collides with user, change direction and add point
+                if (circleHitRect(ball, user)) {
+                    ballMovesRight = false;
+                    points++;
 
-    // T2: What does this line do? What will it look like?
-     sun.setColor(sun.getRed() - 1.0/1000, sun.getGreen() - 1.0/1000, 0, 1);
+                    // if points reach end of level change to between level screen
+                    if (points >= (level * addedPointsPerLevel)) {
+                        screen = b;
+                    }
+                }
 
-    // T3: What does this loop do? What will it look like?
-    // Why are these arguments given to the methods?
-     for (Circle &flake : snow) {
-        flake.moveY(flake.getRadius());
-         if (flake.getTopY() > height) {
-             flake.setCenter(rand() % int(width), -flake.getRadius());
-         }
+                if (ball.getRightX() > width) {
+                    ball.setCenter(-ballSize, rand() % int(height));
+                    screen = e;
+                }
+                ballOnScreen = true;
+            }
+        }
+
+        // if there is not a ball on the screen, move a ball in the balls vector at a random index
+        if (!(ballOnScreen)) {
+            ballMovesRight = true;
+            balls[rand() % int(balls.size())].moveX(ballSize);
+        }
     }
 
     glutPostRedisplay();
@@ -217,7 +304,7 @@ int main(int argc, char** argv) {
     glutInitWindowSize((int)width, (int)height);
     glutInitWindowPosition(0, 0); // Position the window's initial top-left corner
     /* create the window and store the handle to it */
-    wd = glutCreateWindow("Graphics Jeopardy!" /* title */ );
+    wd = glutCreateWindow("Rectangle Goalie!" /* title */ );
 
     // Register callback handler for window re-paint event
     glutDisplayFunc(display);
@@ -241,11 +328,6 @@ int main(int argc, char** argv) {
 
     // handles timer
     glutTimerFunc(0, timer, 0);
-
-
-
-
-
     // Enter the event-processing loop
     glutMainLoop();
     return 0;
