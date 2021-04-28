@@ -10,7 +10,6 @@
 using namespace std;
 
 
-
 GLdouble width, height;
 int wd, ballSize;
 vector<Circle> balls;
@@ -83,7 +82,7 @@ void init() {
     points = 0;
     level = 1;
     addedPointsPerLevel = 5;
-    ballSpeed = ballSize * (1 + (level * 0.2));
+    ballSpeed = ballSize * (1 + (level * 0.1));
     screen = w;
 }
 
@@ -157,7 +156,7 @@ void kbd(unsigned char key, int x, int y) {
         case 112: {
             points = 0;
             level = 1;
-            ballSpeed = ballSize * (1 + (level * 0.2));
+            ballSpeed = ballSize * (1 + (level * 0.1));
 
             // reposition balls
             for (Circle &ball : balls) {
@@ -178,13 +177,12 @@ void kbd(unsigned char key, int x, int y) {
         level++;
 
         // update balls
-        ballSpeed = ballSize * (1 + (level * 0.2));
-        ballColor = colors[rand() % colors.size() - 1];
+        ballSpeed = ballSize * (1 + (level * 0.1));
+        ballColor = colors[rand() % colors.size()];
         for (Circle &ball : balls) {
             ball.setColor(ballColor);
-            if (onScreen(ball) || ball.getRightX() > width) {
-                ball.setCenter(-ballSize, rand() % int(height));
-            }
+            ball.setCenter(-ballSize, rand() % int(height));
+            cout << ball.getCenterX() << endl;
         }
 
         // update user
@@ -192,7 +190,9 @@ void kbd(unsigned char key, int x, int y) {
             user.changeHeight(-(userHeight/10));
         }
         user.setCenter(userCenter);
-        user.setColor(colors[rand() % colors.size() - 1]);
+        user.setColor(colors[rand() % colors.size()]);
+
+
         screen = p;
     }
 
@@ -229,7 +229,6 @@ void kbdS(int key, int x, int y) {
 }
 
 void cursor(int x, int y) {
-
     glutPostRedisplay();
 }
 
@@ -297,7 +296,7 @@ int main(int argc, char** argv) {
 
     init();
 
-    glutInit(&argc, argv);          // Initialize GLUT
+    glutInit(&argc, argv);
 
     glutInitDisplayMode(GLUT_RGBA);
 
